@@ -3,7 +3,7 @@
 
 Prosta dokumentacja projektu Beeloyal jest dostępna online:
 
-👉 [https://docs.beeloyal.app](https://docs.beeloyal.app)
+👉 [https://beeloyal.mintlify.app](https://beeloyal.mintlify.app)
 
 Znajdziesz tam opis architektury, instrukcje uruchomienia, deployment oraz przewodniki dla aplikacji mobilnej i backendu.
 
