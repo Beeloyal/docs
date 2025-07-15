@@ -1,0 +1,188 @@
+---
+title: "Backend - Wprowadzenie"
+description: "Wprowadzenie do architektury backend Beeloyal"
+---
+
+# Backend Beeloyal
+
+Backend systemu Beeloyal składa się z dwóch głównych komponentów:
+- **Supabase** - Backend-as-a-Service z bazą danych PostgreSQL
+- **Teodor API** - Dedykowany API server napisany w Dart Frog
+
+## Architektura backend
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                   Client Apps                           │
+│           (Customer & Employer Flutter)                 │
+└─────────────────────┬───────────────────────────────────┘
+                      │
+         ┌────────────▼────────────┐
+         │      Teodor API         │
+         │     (Dart Frog)         │
+         │                         │
+         │  ┌─────────────────┐   │
+         │  │   JWT Auth      │   │
+         │  └─────────────────┘   │
+         │  ┌─────────────────┐   │
+         │  │  Business Logic │   │
+         │  └─────────────────┘   │
+         │  ┌─────────────────┐   │
+         │  │  API Routes     │   │
+         │  └─────────────────┘   │
+         └────────────┬────────────┘
+                      │
+         ┌────────────▼────────────┐
+         │       Supabase          │
+         │                         │
+         │  ┌─────────────────┐   │
+         │  │   PostgreSQL    │   │
+         │  │   Database      │   │
+         │  └─────────────────┘   │
+         │  ┌─────────────────┐   │
+         │  │ Edge Functions  │   │
+         │  └─────────────────┘   │
+         │  ┌─────────────────┐   │
+         │  │    Storage      │   │
+         │  └─────────────────┘   │
+         │  ┌─────────────────┐   │
+         │  │  Realtime       │   │
+         │  └─────────────────┘   │
+         └─────────────────────────┘
+```
+
+## Komponenty backend
+
+### 1. Supabase
+- **PostgreSQL Database** - Główna baza danych
+- **Authentication** - System autentykacji
+- **Storage** - Przechowywanie plików
+- **Edge Functions** - Funkcje serverless
+- **Realtime** - Aktualizacje w czasie rzeczywistym
+
+### 2. Teodor API
+- **REST API** - Endpointy dla aplikacji mobilnych
+- **JWT Authentication** - Bezpieczna autentykacja
+- **Business Logic** - Logika biznesowa
+- **Data Validation** - Walidacja danych
+
+## Przepływ danych
+
+### 1. Autentykacja
+```
+App → Teodor API → Supabase Auth → JWT Token → App
+```
+
+### 2. Operacje CRUD
+```
+App → Teodor API → Supabase Database → Response → App
+```
+
+### 3. Przesyłanie plików
+```
+App → Teodor API → Supabase Storage → URL → App
+```
+
+### 4. Notyfikacje
+```
+Event → Supabase Functions → External Services → Users
+```
+
+## Główne funkcjonalności
+
+### Zarządzanie użytkownikami
+- Rejestracja i logowanie przez SMS
+- Zarządzanie profilami
+- Autentykacja JWT
+- Role i uprawnienia
+
+### Zarządzanie biznesami
+- CRUD operacje na biznesach
+- Zarządzanie lokalami
+- Zarządzanie pracownikami
+- Ustawienia biznesowe
+
+### System lojalnościowy
+- Punkty lojalnościowe
+- Karty pieczątki
+- Promocje i nagrody
+- Historia transakcji
+
+### Treści marketingowe
+- Posty i promocje
+- Zarządzanie mediami
+- Powiadomienia push
+- Newsletter
+
+## Bezpieczeństwo
+
+### Autentykacja
+- **JWT Tokens** - Bezpieczne tokeny dostępu
+- **SMS Verification** - Weryfikacja numeru telefonu
+- **Token Refresh** - Automatyczne odświeżanie tokenów
+
+### Autoryzacja
+- **Role-Based Access** - Dostęp oparty na rolach
+- **Row Level Security** - Zabezpieczenia na poziomie wierszy
+- **API Rate Limiting** - Ograniczenie zapytań
+
+### Ochrona danych
+- **Data Encryption** - Szyfrowanie danych
+- **Input Validation** - Walidacja danych wejściowych
+- **SQL Injection Protection** - Ochrona przed SQL injection
+
+## Monitoring i obserwowanie
+
+### Metryki
+- **API Response Times** - Czasy odpowiedzi
+- **Error Rates** - Wskaźniki błędów
+- **Database Performance** - Wydajność bazy danych
+- **Storage Usage** - Wykorzystanie storage
+
+### Logowanie
+- **Request Logs** - Logi zapytań
+- **Error Logs** - Logi błędów
+- **Security Logs** - Logi bezpieczeństwa
+- **Performance Logs** - Logi wydajności
+
+## Skalowanie
+
+### Horizontal Scaling
+- **Multiple API Instances** - Wielokrotne instancje API
+- **Load Balancing** - Balansowanie obciążenia
+- **Database Replicas** - Repliki bazy danych
+
+### Vertical Scaling
+- **Resource Optimization** - Optymalizacja zasobów
+- **Caching Strategy** - Strategia cache'owania
+- **Database Optimization** - Optymalizacja bazy danych
+
+## Deployment
+
+### Środowiska
+- **Development** - Lokalne środowisko deweloperskie
+- **Staging** - Środowisko testowe
+- **Production** - Środowisko produkcyjne
+
+### Platformy
+- **Railway** - Hosting Teodor API
+- **Supabase Cloud** - Hosting bazy danych i funkcji
+
+## Następne kroki
+
+<CardGroup cols={2}>
+  <Card
+    title="Supabase"
+    icon="database"
+    href="/backend/supabase"
+  >
+    Poznaj konfigurację i funkcje Supabase
+  </Card>
+  <Card
+    title="Teodor API"
+    icon="code"
+    href="/backend/teodor-api"
+  >
+    Dowiedz się o API server w Dart Frog
+  </Card>
+</CardGroup>

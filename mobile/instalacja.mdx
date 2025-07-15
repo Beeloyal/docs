@@ -1,0 +1,203 @@
+---
+title: "Instalacja i konfiguracja"
+description: "Jak zainstalować i skonfigurować projekt mobilny Beeloyal"
+---
+
+# Instalacja i konfiguracja
+
+## Wymagania
+
+### Oprogramowanie
+- **Flutter 3.32.4** (zarządzanie przez `fvm`)
+- **Dart 3.8.0+**
+- **Melos** - zarządzanie monorepo
+- **Firebase CLI** - konfiguracja Firebase
+- **Supabase CLI** - opcjonalnie, do lokalnego developmentu
+
+### Systemy operacyjne
+- **macOS** - dla developmentu iOS
+- **Windows/Linux** - dla developmentu Android
+
+## Instalacja krok po kroku
+
+### 1. Klonowanie repozytorium
+
+```bash
+git clone https://github.com/Beeloyal/Mobile.git
+cd Mobile
+```
+
+### 2. Instalacja Flutter z FVM
+
+```bash
+# Instalacja FVM
+dart pub global activate fvm
+
+# Instalacja Flutter 3.32.4
+fvm install 3.32.4
+fvm use 3.32.4
+```
+
+### 3. Instalacja Melos
+
+```bash
+dart pub global activate melos
+```
+
+### 4. Instalacja zależności
+
+```bash
+# Bootstrap całego monorepo
+melos bootstrap
+
+# Lub używając Makefile
+make bootstrap
+```
+
+### 5. Konfiguracja Firebase
+
+```bash
+# Instalacja Firebase CLI
+npm install -g firebase-tools
+
+# Logowanie do Firebase
+firebase login
+
+# Konfiguracja projektów
+firebase use --add
+```
+
+### 6. Konfiguracja Supabase
+
+Skopiuj pliki konfiguracyjne:
+
+```bash
+# Customer app
+cp apps/customer/lib/core/config/supabase_config.example.dart apps/customer/lib/core/config/supabase_config.dart
+
+# Employer app
+cp apps/employer/lib/core/config/supabase_config.example.dart apps/employer/lib/core/config/supabase_config.dart
+```
+
+Uzupełnij dane Supabase:
+
+```dart
+class SupabaseConfig {
+  static const String url = 'YOUR_SUPABASE_URL';
+  static const String anonKey = 'YOUR_SUPABASE_ANON_KEY';
+}
+```
+
+## Uruchomienie aplikacji
+
+### Customer App
+
+```bash
+# Uruchomienie w trybie debug
+cd apps/customer
+flutter run
+
+# Lub używając Melos
+melos run dev:customer
+```
+
+### Employer App
+
+```bash
+# Uruchomienie w trybie debug
+cd apps/employer
+flutter run
+
+# Lub używając Melos
+melos run dev:employer
+```
+
+## Komendy Makefile
+
+Projekt zawiera wygodne komendy Makefile:
+
+```bash
+# Bootstrap projektu
+make bootstrap
+
+# Uruchomienie aplikacji Customer
+make run-customer
+
+# Uruchomienie aplikacji Employer
+make run-employer
+
+# Uruchomienie testów
+make test
+
+# Czyszczenie projektu
+make clean
+
+# Generowanie kodu
+make generate
+```
+
+## Konfiguracja IDE
+
+### VS Code
+
+Zainstaluj rozszerzenia:
+- Flutter
+- Dart
+- Melos Code
+
+### Android Studio
+
+Zainstaluj pluginy:
+- Flutter
+- Dart
+
+## Rozwiązywanie problemów
+
+### Problem z FVM
+
+```bash
+# Dodaj do PATH
+export PATH="$PATH:$HOME/.pub-cache/bin"
+export PATH="$PATH:$HOME/fvm/default/bin"
+```
+
+### Problem z Melos
+
+```bash
+# Sprawdź wersję
+melos --version
+
+# Reinstalacja
+dart pub global deactivate melos
+dart pub global activate melos
+```
+
+### Problem z Firebase
+
+```bash
+# Sprawdź konfigurację
+firebase projects:list
+
+# Rekonfiguracja
+firebase use --clear
+firebase use --add
+```
+
+## Następne kroki
+
+<CardGroup cols={2}>
+  <Card
+    title="Struktura projektu"
+    icon="folder-tree"
+    href="/mobile/struktura"
+  >
+    Poznaj szczegółową strukturę projektu
+  </Card>
+  <Card
+    title="Backend API"
+    icon="server"
+    href="/backend/wprowadzenie"
+  >
+    Dowiedz się o API i backendzie
+  </Card>
+</CardGroup>

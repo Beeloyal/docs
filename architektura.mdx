@@ -1,0 +1,122 @@
+---
+title: "Architektura systemu"
+description: "Przegląd architektury systemu Beeloyal"
+---
+
+# Architektura systemu Beeloyal
+
+System Beeloyal składa się z kilku kluczowych komponentów, które współpracują ze sobą tworząc kompletny system lojalnościowy.
+
+## Przegląd architektury
+
+```
+┌─────────────────┐    ┌─────────────────┐
+│  Customer App   │    │  Employer App   │
+│   (Flutter)     │    │   (Flutter)     │
+└─────────────────┘    └─────────────────┘
+         │                       │
+         └───────────┬───────────┘
+                     │
+         ┌───────────▼───────────┐
+         │    Teodor API         │
+         │   (Dart Frog)         │
+         └───────────┬───────────┘
+                     │
+         ┌───────────▼───────────┐
+         │     Supabase          │
+         │  ┌─────────────────┐  │
+         │  │   PostgreSQL    │  │
+         │  └─────────────────┘  │
+         │  ┌─────────────────┐  │
+         │  │ Edge Functions  │  │
+         │  └─────────────────┘  │
+         │  ┌─────────────────┐  │
+         │  │    Storage      │  │
+         │  └─────────────────┘  │
+         └─────────────────────────┘
+```
+
+## Komponenty systemu
+
+### 1. Aplikacje mobilne (Flutter)
+
+**Customer App**
+- Rejestracja i logowanie przez SMS
+- Przeglądanie mapy z lokalami
+- Zbieranie punktów i pieczątek
+- Przeglądanie promocji i postów
+
+**Employer App**
+- Logowanie pracowników lokali
+- Skanowanie kodów QR klientów
+- Dodawanie punktów i pieczątek
+- Zarządzanie treściami marketingowymi
+
+### 2. Backend API (Teodor)
+
+**Teodor API** - nowoczesny API server napisany w Dart Frog:
+- Autentykacja JWT
+- Zarządzanie biznesami
+- Obsługa pracowników
+- Zarządzanie markerami na mapie
+- Obsługa użytkowników
+
+### 3. Supabase Backend
+
+**Baza danych PostgreSQL**
+- Przechowywanie danych użytkowników
+- Dane biznesów i lokali
+- Punkty i pieczątki lojalnościowe
+- Posty i promocje
+
+**Edge Functions**
+- Generowanie markerów mapy
+- Obsługa newslettera
+- Notyfikacje push
+- Webhook Stripe
+- Integracja z Telegram
+
+**Storage**
+- Zdjęcia lokali
+- Markery map
+- Zdjęcia postów i promocji
+- Pliki biznesowe
+
+## Przepływ danych
+
+1. **Autentykacja** - Użytkownicy logują się przez SMS w aplikacji mobilnej
+2. **API Calls** - Aplikacje komunikują się z Teodor API
+3. **Baza danych** - Teodor API łączy się z Supabase PostgreSQL
+4. **Real-time** - Supabase zapewnia aktualizacje w czasie rzeczywistym
+5. **Notyfikacje** - Edge Functions wysyłają powiadomienia
+
+## Technologie
+
+### Frontend
+- **Flutter 3.32.4** - Framework aplikacji mobilnych
+- **Dart 3.8.0+** - Język programowania
+- **Melos** - Zarządzanie monorepo
+
+### Backend
+- **Supabase** - Backend-as-a-Service
+- **PostgreSQL** - Baza danych
+- **Dart Frog** - Framework API
+- **Edge Functions** - Funkcje serverless
+
+### Deployment
+- **Railway** - Hosting Teodor API
+- **Supabase Cloud** - Hosting bazy danych
+- **Firebase** - Dystrybucja aplikacji mobilnych
+
+## Bezpieczeństwo
+
+- **JWT Authentication** - Bezpieczne tokeny dostępu
+- **SMS Verification** - Weryfikacja numerów telefonów
+- **Row Level Security** - Zabezpieczenia na poziomie bazy danych
+- **API Rate Limiting** - Ograniczenie liczby zapytań
+
+## Monitoring
+
+- **Railway Analytics** - Monitorowanie API
+- **Supabase Dashboard** - Metryki bazy danych
+- **Firebase Crashlytics** - Śledzenie błędów w aplikacjach

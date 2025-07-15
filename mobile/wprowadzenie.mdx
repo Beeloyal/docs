@@ -1,0 +1,102 @@
+---
+title: "Aplikacja mobilna - Wprowadzenie"
+description: "Wprowadzenie do aplikacji mobilnej Beeloyal"
+---
+
+# Aplikacja mobilna Beeloyal
+
+Aplikacja mobilna Beeloyal to monorepo Flutter zawierające dwie główne aplikacje:
+- **Customer** - dla klientów zbierających punkty lojalnościowe
+- **Employer** - dla właścicieli i pracowników lokali
+
+## Architektura monorepo
+
+```
+Mobile/
+├── apps/
+│   ├── customer/      # Aplikacja dla klientów
+│   └── employer/      # Aplikacja dla biznesów
+├── packages/
+│   ├── core/          # Wspólna logika biznesowa
+│   ├── design/        # Komponenty UI i style
+│   ├── translations/  # Obsługa wielojęzyczności
+│   └── test_helper/   # Narzędzia testowe
+└── scripts/           # Skrypty automatyzacji
+```
+
+## Technologie
+
+- **Flutter 3.32.4** - Framework aplikacji mobilnych
+- **Dart 3.8.0+** - Język programowania
+- **Melos** - Zarządzanie monorepo
+- **Supabase** - Backend i baza danych
+- **Firebase** - Dystrybucja i crashlytics
+
+## Aplikacja Customer
+
+### Główne funkcje
+- 📱 Rejestracja i logowanie przez SMS
+- 🗺️ Mapa z lokalami i promocjami
+- 🎯 Zbieranie punktów lojalnościowych
+- 🏆 Otrzymywanie pieczątek na karty
+- 📰 Przeglądanie postów i promocji
+
+### Przepływ użytkownika
+1. Rejestracja/logowanie przez numer telefonu
+2. Przeglądanie mapy z lokalami
+3. Odwiedzanie lokali i zbieranie punktów
+4. Korzystanie z promocji i nagród
+
+## Aplikacja Employer
+
+### Główne funkcje
+- 👤 Logowanie pracowników
+- 📱 Skanowanie kodów QR klientów
+- ⭐ Dodawanie punktów i pieczątek
+- 📝 Zarządzanie treściami marketingowymi
+- 🏢 Zarządzanie lokalami
+
+### Przepływ pracownika
+1. Logowanie przez numer telefonu
+2. Wybór lokalu do obsługi
+3. Skanowanie kodu QR klienta
+4. Dodanie punktów/pieczątek
+5. Zarządzanie promocjami
+
+## Wspólne pakiety
+
+### Core Package
+- Modele danych (User, Business, Points)
+- Serwisy API (Supabase client)
+- Logika biznesowa
+- Zarządzanie stanem (Riverpod)
+
+### Design Package
+- Komponenty UI
+- Kolory i style
+- Ikony i obrazy
+- Animacje
+
+### Translations Package
+- Obsługa wielojęzyczności (i18n)
+- Tłumaczenia PL/EN
+- Formatowanie tekstów
+
+## Następne kroki
+
+<CardGroup cols={2}>
+  <Card
+    title="Instalacja"
+    icon="download"
+    href="/mobile/instalacja"
+  >
+    Jak zainstalować i uruchomić projekt
+  </Card>
+  <Card
+    title="Struktura"
+    icon="folder-tree"
+    href="/mobile/struktura"
+  >
+    Szczegółowa struktura projektu
+  </Card>
+</CardGroup>

@@ -1,0 +1,267 @@
+---
+title: "Struktura projektu"
+description: "Szczegółowa struktura projektu mobilnego Beeloyal"
+---
+
+# Struktura projektu
+
+## Przegląd struktury
+
+```
+Mobile/
+├── apps/                    # Aplikacje mobilne
+│   ├── customer/           # Aplikacja dla klientów
+│   └── employer/           # Aplikacja dla biznesów
+├── packages/               # Wspólne pakiety
+│   ├── core/              # Logika biznesowa
+│   ├── design/            # Komponenty UI
+│   ├── translations/      # Wielojęzyczność
+│   └── test_helper/       # Narzędzia testowe
+├── scripts/               # Skrypty automatyzacji
+├── .github/               # CI/CD workflows
+└── docs/                  # Dokumentacja
+```
+
+## Aplikacje
+
+### Customer App (`apps/customer/`)
+
+```
+customer/
+├── lib/
+│   ├── core/              # Konfiguracja i utilities
+│   ├── features/          # Funkcjonalności aplikacji
+│   │   ├── auth/          # Autentykacja
+│   │   ├── map/           # Mapa z lokalami
+│   │   ├── loyalty/       # Program lojalnościowy
+│   │   ├── posts/         # Posty i promocje
+│   │   └── profile/       # Profil użytkownika
+│   ├── shared/            # Wspólne komponenty
+│   └── main.dart          # Punkt wejścia
+├── android/               # Konfiguracja Android
+├── ios/                   # Konfiguracja iOS
+└── test/                  # Testy jednostkowe
+```
+
+### Employer App (`apps/employer/`)
+
+```
+employer/
+├── lib/
+│   ├── core/              # Konfiguracja i utilities
+│   ├── features/          # Funkcjonalności aplikacji
+│   │   ├── auth/          # Autentykacja
+│   │   ├── scanner/       # Skanowanie QR
+│   │   ├── business/      # Zarządzanie biznesem
+│   │   ├── employees/     # Zarządzanie pracownikami
+│   │   └── content/       # Treści marketingowe
+│   ├── shared/            # Wspólne komponenty
+│   └── main.dart          # Punkt wejścia
+├── android/               # Konfiguracja Android
+├── ios/                   # Konfiguracja iOS
+└── test/                  # Testy jednostkowe
+```
+
+## Wspólne pakiety
+
+### Core Package (`packages/core/`)
+
+```
+core/
+├── lib/
+│   ├── src/
+│   │   ├── data/          # Warstwa danych
+│   │   │   ├── models/    # Modele danych
+│   │   │   ├── repositories/ # Repozytoria
+│   │   │   └── services/  # Serwisy API
+│   │   ├── domain/        # Logika biznesowa
+│   │   │   ├── entities/  # Encje domenowe
+│   │   │   ├── usecases/  # Przypadki użycia
+│   │   │   └── repositories/ # Interfejsy repozytoriów
+│   │   ├── presentation/  # Zarządzanie stanem
+│   │   │   ├── providers/ # Riverpod providers
+│   │   │   └── notifiers/ # State notifiers
+│   │   └── utils/         # Narzędzia pomocnicze
+│   └── core.dart          # Główny export
+└── test/                  # Testy pakietu
+```
+
+### Design Package (`packages/design/`)
+
+```
+design/
+├── lib/
+│   ├── src/
+│   │   ├── components/    # Komponenty UI
+│   │   │   ├── buttons/   # Przyciski
+│   │   │   ├── cards/     # Karty
+│   │   │   ├── forms/     # Formularze
+│   │   │   └── navigation/ # Nawigacja
+│   │   ├── theme/         # Motyw aplikacji
+│   │   │   ├── colors.dart # Kolory
+│   │   │   ├── typography.dart # Typografia
+│   │   │   └── theme.dart # Główny motyw
+│   │   ├── icons/         # Ikony
+│   │   └── animations/    # Animacje
+│   └── design.dart        # Główny export
+└── test/                  # Testy komponentów
+```
+
+### Translations Package (`packages/translations/`)
+
+```
+translations/
+├── lib/
+│   ├── src/
+│   │   ├── l10n/          # Pliki tłumaczeń
+│   │   │   ├── app_en.arb # Angielski
+│   │   │   └── app_pl.arb # Polski
+│   │   ├── generated/     # Wygenerowane klasy
+│   │   └── extensions/    # Rozszerzenia
+│   └── translations.dart  # Główny export
+└── test/                  # Testy tłumaczeń
+```
+
+## Architektura Clean Architecture
+
+Projekt wykorzystuje Clean Architecture z podziałem na warstwy:
+
+### 1. Presentation Layer
+- **UI Components** - Widgety Flutter
+- **State Management** - Riverpod providers
+- **Navigation** - GoRouter
+
+### 2. Domain Layer
+- **Entities** - Modele biznesowe
+- **Use Cases** - Logika biznesowa
+- **Repository Interfaces** - Kontrakty dla danych
+
+### 3. Data Layer
+- **Models** - Modele danych (JSON)
+- **Repositories** - Implementacje dostępu do danych
+- **Data Sources** - Supabase API, Cache
+
+## Zarządzanie stanem
+
+### Riverpod
+```dart
+// Provider dla danych użytkownika
+final userProvider = StateNotifierProvider<UserNotifier, User?>((ref) {
+  return UserNotifier(ref.read(userRepositoryProvider));
+});
+
+// Notifier zarządzający stanem
+class UserNotifier extends StateNotifier<User?> {
+  UserNotifier(this._repository) : super(null);
+  
+  final UserRepository _repository;
+  
+  Future<void> signIn(String phone) async {
+    final user = await _repository.signIn(phone);
+    state = user;
+  }
+}
+```
+
+### State Management Flow
+```
+Widget → Provider → Notifier → Repository → API
+  ↑                                          ↓
+  ←─────────── State Change ←─────────────────
+```
+
+## Routing
+
+### GoRouter Configuration
+```dart
+final router = GoRouter(
+  routes: [
+    GoRoute(
+      path: '/',
+      builder: (context, state) => const HomeScreen(),
+    ),
+    GoRoute(
+      path: '/map',
+      builder: (context, state) => const MapScreen(),
+    ),
+    GoRoute(
+      path: '/profile',
+      builder: (context, state) => const ProfileScreen(),
+    ),
+  ],
+);
+```
+
+## Testowanie
+
+### Typy testów
+- **Unit Tests** - Testy logiki biznesowej
+- **Widget Tests** - Testy komponentów UI
+- **Integration Tests** - Testy przepływów E2E
+
+### Test Helper Package
+```dart
+// Mockowe dane
+class MockUserRepository extends Mock implements UserRepository {}
+
+// Helper dla testów
+class TestHelper {
+  static Widget createApp(Widget child) {
+    return MaterialApp(
+      home: child,
+    );
+  }
+}
+```
+
+## CI/CD
+
+### GitHub Actions
+```yaml
+name: CI/CD
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: subosito/flutter-action@v2
+      - run: melos bootstrap
+      - run: melos run test
+```
+
+## Konfiguracja
+
+### Środowiska
+- **Development** - Lokalne środowisko
+- **Staging** - Środowisko testowe
+- **Production** - Środowisko produkcyjne
+
+### Pliki konfiguracyjne
+```dart
+// config/app_config.dart
+class AppConfig {
+  static const String supabaseUrl = String.fromEnvironment('SUPABASE_URL');
+  static const String supabaseKey = String.fromEnvironment('SUPABASE_KEY');
+}
+```
+
+## Następne kroki
+
+<CardGroup cols={2}>
+  <Card
+    title="Backend API"
+    icon="server"
+    href="/backend/wprowadzenie"
+  >
+    Poznaj backend i API
+  </Card>
+  <Card
+    title="Deployment"
+    icon="rocket"
+    href="/deployment/mobile"
+  >
+    Wdrażanie aplikacji mobilnych
+  </Card>
+</CardGroup>

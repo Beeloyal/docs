@@ -1,0 +1,586 @@
+---
+title: "Teodor API - Dart Frog Server"
+description: "Kompletny przewodnik po Teodor API w Dart Frog"
+---
+
+# Teodor API
+
+Teodor API to nowoczesny, szybki API server napisany w Dart Frog, który służy jako pośrednicząca warstwa między aplikacjami mobilnymi a Supabase.
+
+## Architektura Teodor API
+
+### Struktura projektu
+```
+Teodor/
+├── lib/
+│   ├── api/              # Logika API
+│   │   ├── businesses/   # Zarządzanie biznesami
+│   │   ├── employees/    # Zarządzanie pracownikami
+│   │   ├── locals/       # Zarządzanie lokalami
+│   │   ├── markers/      # Markery mapy
+│   │   └── user/         # Zarządzanie użytkownikami
+│   ├── core/             # Podstawowe funkcjonalności
+│   │   ├── clients/      # Klienty zewnętrzne
+│   │   ├── extensions/   # Rozszerzenia
+│   │   └── helpers/      # Pomocnicze funkcje
+│   ├── errors/           # Obsługa błędów
+│   └── middlewares/      # Middleware
+├── routes/               # Definicje routów
+│   ├── health.dart       # Health check
+│   └── v1/              # API v1
+├── Dockerfile           # Konfiguracja Docker
+└── railway.toml         # Konfiguracja Railway
+```
+
+## Konfiguracja środowiska
+
+### Zmienne środowiskowe
+```bash
+# .env
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_KEY=your-service-key
+JWT_SECRET=your-jwt-secret
+PORT=8080
+```
+
+### Konfiguracja Railway
+```toml
+# railway.toml
+[build]
+builder = "dockerfile"
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 100
+restartPolicyType = "on_failure"
+```
+
+## Middleware
+
+### Authentication Middleware
+```dart
+// lib/middlewares/require_authentication_middleware.dart
+import 'package:dart_frog/dart_frog.dart';
+import 'package:jose/jose.dart';
+
+Middleware requireAuthentication() {
+  return (handler) {
+    return (context) async {
+      final request = context.request;
+      final authorization = request.headers['authorization'];
+      
+      if (authorization == null || !authorization.startsWith('Bearer ')) {
+        return Response(
+          statusCode: 401,
+          body: 'Unauthorized',
+        );
+      }
+      
+      final token = authorization.substring(7);
+      
+      try {
+        final jwt = JsonWebToken.unverified(token);
+        final userId = jwt.claims['sub'] as String;
+        
+        return handler(
+          context.provide<String>(() => userId),
+        );
+      } catch (e) {
+        return Response(
+          statusCode: 401,
+          body: 'Invalid token',
+        );
+      }
+    };
+  };
+}
+```
+
+### Logging Middleware
+```dart
+import 'package:dart_frog/dart_frog.dart';
+
+Middleware requestLogger() {
+  return (handler) {
+    return (context) async {
+      final request = context.request;
+      final stopwatch = Stopwatch()..start();
+      
+      print('${request.method} ${request.url.path}');
+      
+      final response = await handler(context);
+      
+      stopwatch.stop();
+      print('${response.statusCode} - ${stopwatch.elapsedMilliseconds}ms');
+      
+      return response;
+    };
+  };
+}
+```
+
+## Routing
+
+### Główny router
+```dart
+// routes/v1/_middleware.dart
+import 'package:dart_frog/dart_frog.dart';
+import '../../lib/middlewares/require_authentication_middleware.dart';
+
+Handler middleware(Handler handler) {
+  return handler
+    .use(requestLogger())
+    .use(requireAuthentication());
+}
+```
+
+### Business endpoints
+```dart
+// routes/v1/businesses/index.dart
+import 'package:dart_frog/dart_frog.dart';
+import '../../../lib/api/businesses/businesses_api.dart';
+
+Response onRequest(RequestContext context) {
+  final businessesApi = context.read<BusinessesApi>();
+  
+  return switch (context.request.method) {
+    HttpMethod.get => _getBusinesses(context, businessesApi),
+    HttpMethod.post => _createBusiness(context, businessesApi),
+    _ => Response(statusCode: 405),
+  };
+}
+
+Response _getBusinesses(RequestContext context, BusinessesApi api) {
+  final userId = context.read<String>();
+  final businesses = await api.getBusinessesForUser(userId);
+  
+  return Response.json(
+    body: businesses.map((b) => b.toJson()).toList(),
+  );
+}
+
+Response _createBusiness(RequestContext context, BusinessesApi api) {
+  final userId = context.read<String>();
+  final body = await context.request.json() as Map<String, dynamic>;
+  
+  final business = await api.createBusiness(
+    userId: userId,
+    name: body['name'],
+    description: body['description'],
+  );
+  
+  return Response.json(
+    statusCode: 201,
+    body: business.toJson(),
+  );
+}
+```
+
+## Modele danych
+
+### Business Model
+```dart
+// lib/api/businesses/models/business.dart
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'business.freezed.dart';
+part 'business.g.dart';
+
+@freezed
+class Business with _$Business {
+  const factory Business({
+    required String id,
+    required String name,
+    String? description,
+    String? logoUrl,
+    required DateTime createdAt,
+    required String ownerId,
+  }) = _Business;
+
+  factory Business.fromJson(Map<String, dynamic> json) =>
+      _$BusinessFromJson(json);
+}
+```
+
+### User Model
+```dart
+// lib/api/user/models/user.dart
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'user.freezed.dart';
+part 'user.g.dart';
+
+@freezed
+class User with _$User {
+  const factory User({
+    required String id,
+    required String phone,
+    String? name,
+    String? email,
+    required UserRole role,
+    required DateTime createdAt,
+  }) = _User;
+
+  factory User.fromJson(Map<String, dynamic> json) =>
+      _$UserFromJson(json);
+}
+
+enum UserRole {
+  customer,
+  employee,
+  owner,
+}
+```
+
+## Data Sources
+
+### Supabase Client
+```dart
+// lib/core/clients/supabase_client.dart
+import 'package:supabase/supabase.dart';
+
+class SupabaseClient {
+  static const String _url = String.fromEnvironment('SUPABASE_URL');
+  static const String _serviceKey = String.fromEnvironment('SUPABASE_SERVICE_KEY');
+  
+  static final SupabaseClient _instance = SupabaseClient._internal();
+  
+  factory SupabaseClient() => _instance;
+  
+  SupabaseClient._internal();
+  
+  late final Supabase _client = Supabase.initialize(
+    url: _url,
+    anonKey: _serviceKey,
+  );
+  
+  Supabase get client => _client;
+}
+```
+
+### Business Repository
+```dart
+// lib/api/businesses/datasource/business_repository.dart
+import 'package:supabase/supabase.dart';
+import '../models/business.dart';
+
+class BusinessRepository {
+  BusinessRepository(this._client);
+  
+  final SupabaseClient _client;
+  
+  Future<List<Business>> getBusinessesForUser(String userId) async {
+    final response = await _client
+        .from('businesses')
+        .select()
+        .eq('owner_id', userId);
+    
+    return response
+        .map((json) => Business.fromJson(json))
+        .toList();
+  }
+  
+  Future<Business> createBusiness({
+    required String userId,
+    required String name,
+    String? description,
+  }) async {
+    final response = await _client
+        .from('businesses')
+        .insert({
+          'owner_id': userId,
+          'name': name,
+          'description': description,
+        })
+        .select()
+        .single();
+    
+    return Business.fromJson(response);
+  }
+  
+  Future<Business> updateBusiness({
+    required String id,
+    String? name,
+    String? description,
+  }) async {
+    final response = await _client
+        .from('businesses')
+        .update({
+          if (name != null) 'name': name,
+          if (description != null) 'description': description,
+        })
+        .eq('id', id)
+        .select()
+        .single();
+    
+    return Business.fromJson(response);
+  }
+  
+  Future<void> deleteBusiness(String id) async {
+    await _client
+        .from('businesses')
+        .delete()
+        .eq('id', id);
+  }
+}
+```
+
+## API Services
+
+### Business API
+```dart
+// lib/api/businesses/businesses_api.dart
+import 'models/business.dart';
+import 'datasource/business_repository.dart';
+
+class BusinessesApi {
+  BusinessesApi(this._repository);
+  
+  final BusinessRepository _repository;
+  
+  Future<List<Business>> getBusinessesForUser(String userId) async {
+    try {
+      return await _repository.getBusinessesForUser(userId);
+    } catch (e) {
+      throw ApiException('Failed to fetch businesses: $e');
+    }
+  }
+  
+  Future<Business> createBusiness({
+    required String userId,
+    required String name,
+    String? description,
+  }) async {
+    if (name.isEmpty) {
+      throw ValidationException('Business name cannot be empty');
+    }
+    
+    try {
+      return await _repository.createBusiness(
+        userId: userId,
+        name: name,
+        description: description,
+      );
+    } catch (e) {
+      throw ApiException('Failed to create business: $e');
+    }
+  }
+}
+```
+
+## Error Handling
+
+### Custom Exceptions
+```dart
+// lib/errors/exceptions/api_exception.dart
+class ApiException implements Exception {
+  ApiException(this.message, [this.statusCode = 500]);
+  
+  final String message;
+  final int statusCode;
+  
+  @override
+  String toString() => 'ApiException: $message';
+}
+
+class ValidationException extends ApiException {
+  ValidationException(String message) : super(message, 400);
+}
+
+class NotFoundException extends ApiException {
+  NotFoundException(String message) : super(message, 404);
+}
+```
+
+### Error Handler
+```dart
+// lib/errors/result_error_handler.dart
+import 'package:dart_frog/dart_frog.dart';
+import 'exceptions/api_exception.dart';
+
+Response handleError(Object error, StackTrace stackTrace) {
+  if (error is ApiException) {
+    return Response.json(
+      statusCode: error.statusCode,
+      body: {
+        'error': error.message,
+        'statusCode': error.statusCode,
+      },
+    );
+  }
+  
+  // Log nieoczekiwane błędy
+  print('Unexpected error: $error\n$stackTrace');
+  
+  return Response.json(
+    statusCode: 500,
+    body: {
+      'error': 'Internal server error',
+      'statusCode': 500,
+    },
+  );
+}
+```
+
+## Health Check
+
+```dart
+// routes/health.dart
+import 'package:dart_frog/dart_frog.dart';
+
+Response onRequest(RequestContext context) {
+  return Response.json(
+    body: {
+      'status': 'healthy',
+      'timestamp': DateTime.now().toIso8601String(),
+      'version': '1.0.0',
+    },
+  );
+}
+```
+
+## Deployment
+
+### Docker
+```dockerfile
+# Dockerfile
+FROM dart:3.7-sdk AS build
+
+WORKDIR /app
+COPY . .
+
+RUN dart pub get
+RUN dart compile exe bin/server.dart -o bin/server
+
+FROM scratch
+COPY --from=build /app/bin/server /app/bin/server
+
+EXPOSE 8080
+CMD ["/app/bin/server"]
+```
+
+### Railway Deployment
+```bash
+# Deploy na Railway
+railway login
+railway init
+railway up
+```
+
+## Monitoring
+
+### Logging
+```dart
+// lib/core/helpers/logger.dart
+import 'dart:developer' as developer;
+
+class Logger {
+  static void info(String message) {
+    developer.log(message, name: 'INFO');
+  }
+  
+  static void error(String message, [Object? error]) {
+    developer.log(message, name: 'ERROR', error: error);
+  }
+  
+  static void warning(String message) {
+    developer.log(message, name: 'WARNING');
+  }
+}
+```
+
+### Performance Monitoring
+```dart
+// lib/core/helpers/performance_monitor.dart
+class PerformanceMonitor {
+  static Future<T> measure<T>(
+    String operationName,
+    Future<T> Function() operation,
+  ) async {
+    final stopwatch = Stopwatch()..start();
+    
+    try {
+      final result = await operation();
+      stopwatch.stop();
+      
+      Logger.info(
+        'Operation $operationName completed in ${stopwatch.elapsedMilliseconds}ms',
+      );
+      
+      return result;
+    } catch (e) {
+      stopwatch.stop();
+      Logger.error(
+        'Operation $operationName failed after ${stopwatch.elapsedMilliseconds}ms',
+        e,
+      );
+      rethrow;
+    }
+  }
+}
+```
+
+## Testowanie
+
+### Unit Tests
+```dart
+// test/api/businesses/businesses_api_test.dart
+import 'package:test/test.dart';
+import 'package:mocktail/mocktail.dart';
+
+class MockBusinessRepository extends Mock implements BusinessRepository {}
+
+void main() {
+  group('BusinessesApi', () {
+    late MockBusinessRepository mockRepository;
+    late BusinessesApi api;
+    
+    setUp(() {
+      mockRepository = MockBusinessRepository();
+      api = BusinessesApi(mockRepository);
+    });
+    
+    test('should return businesses for user', () async {
+      // Arrange
+      const userId = 'user-123';
+      final businesses = [
+        Business(
+          id: 'business-1',
+          name: 'Test Business',
+          ownerId: userId,
+          createdAt: DateTime.now(),
+        ),
+      ];
+      
+      when(() => mockRepository.getBusinessesForUser(userId))
+          .thenAnswer((_) async => businesses);
+      
+      // Act
+      final result = await api.getBusinessesForUser(userId);
+      
+      // Assert
+      expect(result, equals(businesses));
+      verify(() => mockRepository.getBusinessesForUser(userId)).called(1);
+    });
+  });
+}
+```
+
+## Następne kroki
+
+<CardGroup cols={2}>
+  <Card
+    title="Deployment Backend"
+    icon="rocket"
+    href="/deployment/backend"
+  >
+    Wdrażanie backend na produkcję
+  </Card>
+  <Card
+    title="Deployment Mobile"
+    icon="mobile"
+    href="/deployment/mobile"
+  >
+    Wdrażanie aplikacji mobilnych
+  </Card>
+</CardGroup>

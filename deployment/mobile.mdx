@@ -1,0 +1,459 @@
+---
+title: "Deployment - Aplikacje mobilne"
+description: "Wdrażanie aplikacji mobilnych Beeloyal na produkcję"
+---
+
+# Deployment aplikacji mobilnych
+
+Przewodnik po wdrażaniu aplikacji Customer i Employer na platformy Android i iOS.
+
+## Przygotowanie do deployment
+
+### 1. Konfiguracja środowisk
+
+#### Pliki konfiguracyjne
+```
+apps/customer/
+├── android/
+│   ├── app/
+│   │   ├── build.gradle
+│   │   └── google-services.json
+│   └── key.properties
+├── ios/
+│   ├── Runner/
+│   │   └── GoogleService-Info.plist
+│   └── Runner.xcodeproj/
+└── lib/
+    └── config/
+        ├── app_config.dart
+        └── firebase_config.dart
+```
+
+#### Zmienne środowiskowe
+```dart
+// lib/config/app_config.dart
+class AppConfig {
+  static const String flavor = String.fromEnvironment('FLAVOR', defaultValue: 'dev');
+  static const String supabaseUrl = String.fromEnvironment('SUPABASE_URL');
+  static const String supabaseKey = String.fromEnvironment('SUPABASE_ANON_KEY');
+  
+  static bool get isProduction => flavor == 'production';
+  static bool get isStaging => flavor == 'staging';
+  static bool get isDevelopment => flavor == 'development';
+}
+```
+
+### 2. Flavors (Środowiska)
+
+#### Android (build.gradle)
+```gradle
+android {
+    flavorDimensions "default"
+    
+    productFlavors {
+        development {
+            dimension "default"
+            applicationIdSuffix ".dev"
+            versionNameSuffix "-dev"
+            buildConfigField "String", "API_URL", '"https://api-dev.beeloyal.app"'
+        }
+        
+        staging {
+            dimension "default"
+            applicationIdSuffix ".staging"
+            versionNameSuffix "-staging"
+            buildConfigField "String", "API_URL", '"https://api-staging.beeloyal.app"'
+        }
+        
+        production {
+            dimension "default"
+            buildConfigField "String", "API_URL", '"https://api.beeloyal.app"'
+        }
+    }
+}
+```
+
+#### iOS (xcconfig)
+```
+// ios/Flutter/Development.xcconfig
+#include "Generated.xcconfig"
+FLUTTER_TARGET=lib/main_development.dart
+BUNDLE_SUFFIX=.dev
+BUNDLE_DISPLAY_NAME=Beeloyal Dev
+
+// ios/Flutter/Staging.xcconfig
+#include "Generated.xcconfig"
+FLUTTER_TARGET=lib/main_staging.dart
+BUNDLE_SUFFIX=.staging
+BUNDLE_DISPLAY_NAME=Beeloyal Staging
+
+// ios/Flutter/Production.xcconfig
+#include "Generated.xcconfig"
+FLUTTER_TARGET=lib/main_production.dart
+BUNDLE_DISPLAY_NAME=Beeloyal
+```
+
+## Android Deployment
+
+### 1. Konfiguracja keystore
+
+#### Tworzenie keystore
+```bash
+keytool -genkey -v -keystore ~/beeloyal-key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias beeloyal
+```
+
+#### Konfiguracja key.properties
+```properties
+# android/key.properties
+storePassword=your_store_password
+keyPassword=your_key_password
+keyAlias=beeloyal
+storeFile=/Users/username/beeloyal-key.jks
+```
+
+### 2. Build aplikacji
+
+#### Debug build
+```bash
+# Customer app
+cd apps/customer
+flutter build apk --flavor development --dart-define=FLAVOR=development
+
+# Employer app
+cd apps/employer
+flutter build apk --flavor development --dart-define=FLAVOR=development
+```
+
+#### Release build
+```bash
+# Customer app - production
+cd apps/customer
+flutter build apk --release --flavor production --dart-define=FLAVOR=production --dart-define=SUPABASE_URL=$SUPABASE_URL --dart-define=SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY
+
+# Bundle dla Google Play
+flutter build appbundle --release --flavor production --dart-define=FLAVOR=production --dart-define=SUPABASE_URL=$SUPABASE_URL --dart-define=SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY
+```
+
+### 3. Google Play Console
+
+#### Przygotowanie metadanych
+```
+metadata/
+├── android/
+│   ├── pl/
+│   │   ├── title.txt
+│   │   ├── short_description.txt
+│   │   ├── full_description.txt
+│   │   └── changelogs/
+│   │       └── 1.txt
+│   └── images/
+│       ├── icon.png
+│       ├── feature_graphic.png
+│       └── screenshots/
+```
+
+#### Upload przez fastlane
+```ruby
+# android/fastlane/Fastfile
+platform :android do
+  desc "Deploy to Google Play"
+  lane :deploy do
+    gradle(task: "bundleRelease")
+    upload_to_play_store(
+      track: 'production',
+      aab: '../build/app/outputs/bundle/productionRelease/app-production-release.aab'
+    )
+  end
+end
+```
+
+## iOS Deployment
+
+### 1. Konfiguracja Xcode
+
+#### Certificates i Provisioning Profiles
+```bash
+# Instalacja certificates
+security import beeloyal_distribution.p12 -k ~/Library/Keychains/login.keychain
+
+# Download provisioning profiles
+cp Beeloyal_Distribution.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
+```
+
+#### Konfiguracja build settings
+```
+# iOS build settings
+CODE_SIGN_IDENTITY = "iPhone Distribution"
+PROVISIONING_PROFILE_SPECIFIER = "Beeloyal Distribution"
+DEVELOPMENT_TEAM = "YOUR_TEAM_ID"
+```
+
+### 2. Build aplikacji
+
+#### Archive build
+```bash
+# Customer app
+cd apps/customer
+flutter build ios --release --flavor production --dart-define=FLAVOR=production --dart-define=SUPABASE_URL=$SUPABASE_URL --dart-define=SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY
+
+# Utworzenie archive w Xcode
+xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release-production archive -archivePath build/Runner.xcarchive
+```
+
+#### Export IPA
+```bash
+xcodebuild -exportArchive -archivePath build/Runner.xcarchive -exportOptionsPlist ios/ExportOptions.plist -exportPath build/
+```
+
+### 3. App Store Connect
+
+#### Automatyczny upload
+```bash
+# Używając altool
+xcrun altool --upload-app -f build/Runner.ipa -u "your-apple-id@email.com" -p "app-specific-password"
+
+# Używając fastlane
+fastlane deliver
+```
+
+#### fastlane konfiguracja
+```ruby
+# ios/fastlane/Fastfile
+platform :ios do
+  desc "Deploy to App Store"
+  lane :deploy do
+    build_app(
+      scheme: "Runner",
+      configuration: "Release-production",
+      export_method: "app-store"
+    )
+    upload_to_app_store(
+      ipa: "Runner.ipa",
+      skip_metadata: false,
+      skip_screenshots: false
+    )
+  end
+end
+```
+
+## CI/CD Pipeline
+
+### GitHub Actions
+
+#### Workflow dla Android
+```yaml
+# .github/workflows/android.yml
+name: Android CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Java
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'zulu'
+        java-version: '11'
+    
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.32.4'
+    
+    - name: Get dependencies
+      run: |
+        cd apps/customer
+        flutter pub get
+    
+    - name: Run tests
+      run: |
+        cd apps/customer
+        flutter test
+    
+    - name: Build APK
+      run: |
+        cd apps/customer
+        flutter build apk --release --flavor production
+        
+    - name: Upload APK
+      uses: actions/upload-artifact@v3
+      with:
+        name: release-apk
+        path: apps/customer/build/app/outputs/apk/production/release/app-production-release.apk
+```
+
+#### Workflow dla iOS
+```yaml
+# .github/workflows/ios.yml
+name: iOS CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+
+jobs:
+  build:
+    runs-on: macos-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.32.4'
+    
+    - name: Install certificates
+      run: |
+        echo ${{ secrets.CERTIFICATES_P12 }} | base64 -d > certificate.p12
+        security create-keychain -p "" build.keychain
+        security import certificate.p12 -k build.keychain -P ${{ secrets.CERTIFICATE_PASSWORD }} -T /usr/bin/codesign
+        security set-keychain-settings build.keychain
+        security unlock-keychain -p "" build.keychain
+    
+    - name: Install provisioning profiles
+      run: |
+        mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+        echo ${{ secrets.PROVISIONING_PROFILE }} | base64 -d > ~/Library/MobileDevice/Provisioning\ Profiles/profile.mobileprovision
+    
+    - name: Build iOS
+      run: |
+        cd apps/customer
+        flutter build ios --release --no-codesign
+        
+    - name: Archive and Export
+      run: |
+        cd apps/customer
+        xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release archive -archivePath build/Runner.xcarchive
+        xcodebuild -exportArchive -archivePath build/Runner.xcarchive -exportOptionsPlist ios/ExportOptions.plist -exportPath build/
+```
+
+### Codemagic
+
+#### codemagic.yaml
+```yaml
+workflows:
+  android-workflow:
+    name: Android Workflow
+    environment:
+      flutter: stable
+      groups:
+        - android_signing
+    scripts:
+      - name: Get Flutter dependencies
+        script: |
+          cd apps/customer
+          flutter packages pub get
+      - name: Build APK
+        script: |
+          cd apps/customer
+          flutter build apk --release --flavor production
+    artifacts:
+      - apps/customer/build/app/outputs/flutter-apk/*.apk
+    publishing:
+      google_play:
+        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        track: production
+```
+
+## Monitoring po deployment
+
+### Crash Reporting
+
+#### Firebase Crashlytics
+```dart
+// lib/core/services/crash_service.dart
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+
+class CrashService {
+  static void initialize() {
+    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterError;
+  }
+  
+  static void recordError(dynamic error, StackTrace stackTrace) {
+    FirebaseCrashlytics.instance.recordError(error, stackTrace);
+  }
+  
+  static void setUserId(String userId) {
+    FirebaseCrashlytics.instance.setUserIdentifier(userId);
+  }
+}
+```
+
+### Analytics
+
+#### Firebase Analytics
+```dart
+// lib/core/services/analytics_service.dart
+import 'package:firebase_analytics/firebase_analytics.dart';
+
+class AnalyticsService {
+  static final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
+  
+  static Future<void> logEvent(String name, Map<String, dynamic> parameters) async {
+    await _analytics.logEvent(name: name, parameters: parameters);
+  }
+  
+  static Future<void> setUserId(String userId) async {
+    await _analytics.setUserId(id: userId);
+  }
+  
+  static Future<void> logScreenView(String screenName) async {
+    await _analytics.logScreenView(screenName: screenName);
+  }
+}
+```
+
+## Rollback Strategy
+
+### Wersjonowanie
+```dart
+// lib/core/version/version_manager.dart
+class VersionManager {
+  static const String version = '1.0.0';
+  static const int buildNumber = 1;
+  
+  static bool isUpdateRequired(String minVersion) {
+    return version.compareTo(minVersion) < 0;
+  }
+}
+```
+
+### Stopniowe wdrażanie
+```yaml
+# Google Play - stopniowe wdrażanie
+staged_rollout:
+  track: production
+  rollout_percentage: 10  # Zaczyna od 10%
+  
+# Po tygodniu zwiększ do 50%
+# Po kolejnym tygodniu do 100%
+```
+
+## Następne kroki
+
+<CardGroup cols={2}>
+  <Card
+    title="Deployment Backend"
+    icon="server"
+    href="/deployment/backend"
+  >
+    Wdrażanie backend na produkcję
+  </Card>
+  <Card
+    title="Monitoring"
+    icon="chart-line"
+    href="/monitoring"
+  >
+    Monitorowanie aplikacji po deployment
+  </Card>
+</CardGroup>

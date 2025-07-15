@@ -1,71 +1,79 @@
 ---
-title: Introduction
-description: "Welcome to the home of your new documentation"
+title: "Beeloyal - Dokumentacja"
+description: "Dokumentacja systemu lojalnościowego Beeloyal"
 ---
 
 <img
   className="block dark:hidden"
   src="/images/hero-light.png"
-  alt="Hero Light"
+  alt="Beeloyal Logo"
 />
 <img
   className="hidden dark:block"
   src="/images/hero-dark.png"
-  alt="Hero Dark"
+  alt="Beeloyal Logo"
 />
 
-## Setting up
+## Witamy w dokumentacji Beeloyal
 
-The first step to world-class documentation is setting up your editing environments.
+Beeloyal to nowoczesny system lojalnościowy składający się z aplikacji mobilnych dla klientów i biznesów, backendowego API oraz infrastruktury opartej na Supabase.
+
+## Architektura systemu
 
 <CardGroup cols={2}>
   <Card
-    title="Edit Your Docs"
-    icon="pen-to-square"
-    href="https://mintlify.com/docs/quickstart"
+    title="Aplikacja mobilna"
+    icon="mobile-screen"
+    href="/mobile/wprowadzenie"
   >
-    Get your docs set up locally for easy development
+    Dwie aplikacje Flutter: Customer dla klientów i Employer dla biznesów
   </Card>
   <Card
-    title="Preview Changes"
-    icon="image"
-    href="https://mintlify.com/docs/development"
+    title="Backend API"
+    icon="server"
+    href="/backend/wprowadzenie"
   >
-    Preview your changes before you push to make sure they're perfect
+    Teodor API (Dart Frog) i Supabase z funkcjami Edge Functions
   </Card>
 </CardGroup>
 
-## Make it yours
+## Komponenty systemu
 
-Update your docs to your brand and add valuable content for the best user conversion.
-
-<CardGroup cols={2}>
+<CardGroup cols={3}>
   <Card
-    title="Customize Style"
-    icon="palette"
-    href="https://mintlify.com/docs/settings/global"
+    title="Mobile Apps"
+    icon="mobile"
+    href="/mobile/struktura"
   >
-    Customize your docs to your company's colors and brands
+    Flutter monorepo z aplikacjami Customer i Employer
   </Card>
   <Card
-    title="Reference APIs"
+    title="Supabase"
+    icon="database"
+    href="/backend/supabase"
+  >
+    Baza danych, autentykacja i storage
+  </Card>
+  <Card
+    title="Teodor API"
     icon="code"
-    href="https://mintlify.com/docs/api-playground/openapi"
+    href="/backend/teodor-api"
   >
-    Automatically generate endpoints from an OpenAPI spec
-  </Card>
-  <Card
-    title="Add Components"
-    icon="screwdriver-wrench"
-    href="https://mintlify.com/docs/content/components/accordions"
-  >
-    Build interactive features and designs to guide your users
-  </Card>
-  <Card
-    title="Get Inspiration"
-    icon="stars"
-    href="https://mintlify.com/customers"
-  >
-    Check out our showcase of our favorite documentation
+    API server w Dart Frog
   </Card>
 </CardGroup>
+
+## Szybki start
+
+1. **Klonowanie repozytorium** - Pobierz kod źródłowy projektu
+2. **Konfiguracja środowiska** - Skonfiguruj Flutter, Dart i narzędzia
+3. **Uruchomienie aplikacji** - Wystartuj aplikacje mobilne i backend
+4. **Deployment** - Wdróż aplikacje na produkcję
+
+<Card
+  title="Rozpocznij od architektury"
+  icon="arrow-right"
+  href="/architektura"
+>
+  Poznaj architekturę systemu Beeloyal
+</Card>
